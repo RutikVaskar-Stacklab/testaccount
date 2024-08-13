@@ -1,0 +1,26 @@
+const io = require("socket.io")(5000, {
+    cors: {
+        origin: ['http://localhost:3000']
+    }
+});
+
+const users = {};  
+
+io.on("connection", socket => {
+    socket.on('new-user-joined', name => {
+        users[socket.id] = name;
+        io.emit("allUsers", users); // Send the updated users list to all clients
+
+        socket.broadcast.emit('receive-message', {user: "new-user-joined", message: users[socket.id], sender: "server"});
+    });
+
+    socket.on('send-message', message => {
+        socket.broadcast.emit('receive-message', {user: users[socket.id], message: message, sender: "user"});
+    });
+
+    socket.on('disconnect', () => {
+        socket.broadcast.emit('receive-message', {user: "user left the chat", message: users[socket.id], sender: "server"});
+        delete users[socket.id]; // Remove the user from the list
+        io.emit("allUsers", users); // Send the updated users list to all clients
+    });
+});

@@ -1,0 +1,119 @@
+import React, { useRef, useState, useEffect } from "react";
+import { io } from "socket.io-client";
+import ShowUsers from "./components/ShowUsers";
+
+const App = () => {
+  const [addUsers, setUsers] = useState([]);
+  const [socket, setSocket] = useState(null);
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([]);
+  const messageDiv = useRef(null);
+
+  useEffect(() => {
+    const socketInstance = io("http://localhost:5000");
+    setSocket(socketInstance);
+
+    socketInstance.on("connect", () => {
+      const name = prompt("Enter your name to join");
+      socketInstance.emit("new-user-joined", name);
+    });
+    
+    // Update users list when a new user joins or someone disconnects
+    socketInstance.on("allUsers", (users) => {
+      const usersArray = Object.entries(users).map(([id, name]) => ({
+        id: id,
+        name: name,
+      }));
+      setUsers(usersArray);
+    });
+
+    socketInstance.on("receive-message", (message) => {
+      setMessages((prevMessages) => [...prevMessages, message]);
+    });
+    
+    return () => {
+      socketInstance.disconnect();
+    };
+  }, []);
+  
+  console.log(addUsers)
+  const handleChange = (e) => {
+    setMessage(e.target.value);
+  };
+
+  const sendMessage = () => {
+    if (socket) {
+      socket.emit("send-message", message);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { user: "You", message: message, sender: "me" },
+      ]);
+      setMessage(""); 
+    }
+  };
+
+  const Disconnect = () => {
+    if (socket) {
+      socket.disconnect();
+    }
+  };
+
+  return (
+    <div className="flex justify-center min-h-screen flex-col items-center">
+      <section className="border-4 p-4 w-3/4 h-96 border-slate-900 overflow-y-auto">
+        <div className="message-cont relative box-border" ref={messageDiv}>
+          {messages.length > 0 &&
+            messages.map((msg, index) => (
+              <div key={index} className={`w-full flex ${
+                msg.sender === "me" ? "justify-end" : msg.sender === "user"?  "justify-start" : "justify-center"
+              }`}>
+                <h1
+                className={`p-2 m-2 ${
+                  msg.sender === "me"
+                    ? "bg-red-500 text-white justify-end"
+                    : msg.sender === "server"
+                    ? "bg-white border-2 border-slate-600 text-slate-700"
+                    : "bg-green-500 text-white"
+                } font-semibold rounded-xl max-w-fit`}
+              >
+                {msg.user}: {msg.message}
+              </h1>
+              </div>
+            ))}
+        </div>
+      </section>
+      <div className="flex items-center gap-6 w-4/6 mt-5">
+        <input
+          type="text"
+          className="w-3/4 border-2 border-emerald-700 p-2 rounded-xl m-3"
+          value={message}
+          onChange={handleChange}
+        />
+        <button
+          onClick={sendMessage}
+          className="border-2 border-none bg-blue-500 text-white font-bold h-5/6 rounded-lg p-2 w-1/6"
+        >
+          Send
+        </button>
+        <button
+          onClick={Disconnect}
+          className="border-2 border-none bg-blue-500 text-white font-bold rounded-lg h-5/6 p-2 w-1/6"
+        >
+          Disconnect
+        </button>
+      </div>
+
+      {/* Display connected users */}
+      <div className="mt-5">
+        <h2 className="font-bold">Connected Users:</h2>
+       
+         {addUsers.map((user,i)=>{
+          return <ShowUsers key={i} name={user.name} id={user.id} />
+         })}
+        
+      </div>
+    </div>
+  );
+};
+
+export default App;

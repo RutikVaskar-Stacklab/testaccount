@@ -1,0 +1,50 @@
+import React, { useEffect, useRef, useState } from 'react'
+import {io,socket} from "socket.io-client"
+
+const App = () => {
+  
+useEffect(()=>{
+  const socket = io("http://localhost:5000")
+
+},[])
+  const [message, setMessage] = useState(" ")
+  let messageDiv = useRef(0);
+  // console.log(messageDiv.current)
+
+   const displayMessage =(msg)=>{
+
+    let messageCont = messageDiv.current
+    messageCont.innerHTML = <p>{msg}</p>
+   }
+   
+  socket.on('receive-message',message =>{
+    displayMessage(message)
+  })
+
+
+
+  const handleChange = (e) => {
+    setMessage(e.target.value)
+  }
+
+  const SendMessage = () =>{
+    socket.emit('send-message',message)
+    setMessage(" ")
+  }
+
+
+  return (
+    <div className=' flex justify-center min-h-screen flex-col items-center'>
+      <section className='border-4 p-4 w-3/4 h-80 border-slate-900'>
+        <div className='message-cont' ref={messageDiv}></div>
+
+      </section>
+      <div className='w-3/4 mt-5'>
+        <input type='text' className='w-3/4 border-2 border-emerald-700 p-2 rounded-xl m-3 ' value={message} onChange={handleChange} />
+        <button onClick={SendMessage}  className='border-2 border-none bg-blue-500 text-white font-bold rounded-lg p-2 w-1/5'>Send</button>
+      </div>
+    </div>
+  )
+}
+
+export default App
